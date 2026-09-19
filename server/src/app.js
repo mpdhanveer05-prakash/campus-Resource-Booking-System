@@ -7,8 +7,11 @@ import { attachUser } from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { httpLogger } from './middleware/httpLogger.js';
 import { requestId } from './middleware/requestId.js';
+import { adminRouter } from './routes/admin.js';
 import { authRouter } from './routes/auth.js';
+import { bookingsRouter } from './routes/bookings.js';
 import { healthRouter } from './routes/health.js';
+import { resourcesRouter } from './routes/resources.js';
 
 /**
  * Builds the Express application.
@@ -42,6 +45,9 @@ export function createApp() {
   app.use(attachUser);
 
   app.use('/api/auth', authRouter);
+  app.use('/api/resources', resourcesRouter);
+  app.use('/api/bookings', bookingsRouter);
+  app.use('/api/admin', adminRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
