@@ -1,0 +1,86 @@
+# Production-shaped stack: static frontend, API and private PostgreSQL behind
+# one HTTPS origin.
+#
+# Only the web service publishes a port. The database is reachable solely on the
+# internal network and never from the host or the internet.
+services:
+  db:
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      POSTGRES_DB: ${POSTGRES_DB:?required}
+    volumes:
+      - campus_booking_prod_data:/var/lib/postgresql/data
+    # No ports section: the database is not published.
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot release job. Runs migrations once, then exits, so replicas never
+  # race to migrate or auto-create tables.
+  migrate:
+    build:
+      context: ../server
+    command: ['node', 'scripts/migrate.js', 'up']
+    environment:
+      NODE_ENV: production
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?required}
+      # Validated at startup even though migrations do not serve traffic.
+      DATABASE_URL: ${DATABASE_URL:?required}
+      SESSION_SECRET: ${SESSION_SECRET:?required}
+      APP_ORIGIN: ${APP_ORIGIN:?required}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+    networks:
+      - internal
+
+  api:
+    build:
+      context: ../server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL:?required}
+      SESSION_SECRET: ${SESSION_SECRET:?required}
+      APP_ORIGIN: ${APP_ORIGIN:?required}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Not published: only the proxy reaches the API.
+    networks:
+      - internal
+
+  web:
+    build:
+      context: ../client
+    restart: unless-stopped
+    ports:
+      # The single public entry point. TLS terminates here.
+      - '${PUBLIC_HTTP_PORT:-8080}:80'
+      - '${PUBLIC_HTTPS_PORT:-8443}:443'
+    volumes:
+      # Supply real certificates here in a real deployment.
+      - ./tls:/etc/nginx/tls:ro
+    depends_on:
+      - api
+    networks:
+      - internal
+
+volumes:
+  campus_booking_prod_data:
+
+networks:
+  internal:
+    driver: bridge

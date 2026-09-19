@@ -8,6 +8,10 @@ node_modules/
 .env.development
 .env.production
 .env.test
+.env.prod
+.env.production.local
+# Any dotenv variant, however suffixed
+.env.*
 # Placeholders are committed deliberately
 !.env.example
 
@@ -37,3 +41,11 @@ Thumbs.db
 
 # Local database volumes
 pgdata/
+
+# TLS material: never commit private keys, not even local self-signed ones
+infra/tls/
+*.key
+*.crt
+*.pem
+*.p12
+*.pfx
