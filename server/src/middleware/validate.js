@@ -9,7 +9,12 @@ import { AppError } from './errorHandler.js';
  */
 export function validate(source, schema) {
   return (req, _res, next) => {
-    const result = schema.safeParse(req[source]);
+    // Express leaves req.body undefined when a request carries no body at all.
+    // Treat that as an empty object so schemas whose fields are all optional
+    // still accept a bodyless request.
+    const input = source === 'body' && req.body === undefined ? {} : req[source];
+
+    const result = schema.safeParse(input);
 
     if (!result.success) {
       const details = result.error.issues.map((issue) => ({

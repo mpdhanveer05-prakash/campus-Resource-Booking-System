@@ -312,6 +312,22 @@ describe('cancellation', () => {
     expect(rows[0].c).toBe(1);
   });
 
+  it('accepts a cancellation request that carries no body at all', async () => {
+    const slotId = await secondDateSlotId(3);
+    const created = await studentA.post('/api/bookings', {
+      slotId,
+      purpose: 'Booking cancelled by a request with no body',
+    });
+    expect(created.status).toBe(201);
+
+    // A bodyless POST: Express leaves req.body undefined, which must still be
+    // accepted because every field on the cancel schema is optional.
+    const response = await studentA.postNoBody(`/api/bookings/${created.body.data.id}/cancel`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.status).toBe('CANCELLED');
+  });
+
   it('requires a reason when an admin cancels someone else\'s booking', async () => {
     const slotId = await secondDateSlotId(0);
     const created = await studentB.post('/api/bookings', {

@@ -62,6 +62,10 @@ export function createClient() {
       withCookie(request(app).patch(path)).set('x-csrf-token', csrfToken ?? '').send(body ?? {}),
 
     postWithoutCsrf: (path, body) => withCookie(request(app).post(path)).send(body ?? {}),
+
+    /** Sends no body at all, so req.body is undefined server-side. */
+    postNoBody: (path) =>
+      withCookie(request(app).post(path)).set('x-csrf-token', csrfToken ?? ''),
   };
 
   return client;
