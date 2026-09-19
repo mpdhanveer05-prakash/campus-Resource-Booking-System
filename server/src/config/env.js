@@ -19,6 +19,17 @@ const envSchema = z.object({
   // Exact browser origin allowed to make state-changing requests.
   APP_ORIGIN: z.url('APP_ORIGIN must be a valid URL'),
 
+  // Signs the session cookie. Server-only secret.
+  SESSION_SECRET: z.string().min(32, 'SESSION_SECRET must be at least 32 characters'),
+
+  // Migration and test connections are optional at runtime; scripts validate
+  // their own requirements.
+  MIGRATION_DATABASE_URL: z.string().optional(),
+  TEST_DATABASE_URL: z.string().optional(),
+  SEED_ADMIN_EMAIL: z.string().optional(),
+  SEED_ADMIN_PASSWORD: z.string().optional(),
+  SEED_STUDENT_PASSWORD: z.string().optional(),
+
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),

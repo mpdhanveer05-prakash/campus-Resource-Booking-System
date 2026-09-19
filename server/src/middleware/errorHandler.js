@@ -52,8 +52,15 @@ export function errorHandler(err, req, res, _next) {
     return _next(err);
   }
 
-  res.status(status).json({
+  const payload = {
     error: { code, message },
     requestId: req.id,
-  });
+  };
+
+  // Field-level validation feedback, when the error carries it.
+  if (Array.isArray(err?.details)) {
+    payload.error.details = err.details;
+  }
+
+  res.status(status).json(payload);
 }
